@@ -2,7 +2,7 @@ import contextlib
 import logging
 import os
 from collections.abc import AsyncIterator
-from datetime import datetime
+from datetime import datetime, timezone
 
 import anyio
 import click
@@ -77,8 +77,8 @@ async def fetch_weekly_weather(city: str, api_key: str) -> list[dict[str, str]]:
     daily_forecasts = {}
     
     for item in data["list"]:
-        # Parse the forecast timestamp
-        dt = datetime.fromtimestamp(item["dt"])
+        # Parse the forecast timestamp (use UTC for consistency)
+        dt = datetime.fromtimestamp(item["dt"], tz=timezone.utc)
         date_key = dt.strftime("%Y-%m-%d")
         
         # If we haven't seen this date yet, or this is a midday forecast, store it
