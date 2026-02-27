@@ -64,6 +64,7 @@ async def fetch_weather(city: str, api_key: str) -> dict[str, str]:
 @click.option(
     "--log-level",
     default="INFO",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], case_sensitive=False),
     help="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
 )
 @click.option(
@@ -77,7 +78,7 @@ def main(port: int, api_key: str, log_level: str, json_response: bool) -> int:
 
     # ---------------------- Configure logging ----------------------
     logging.basicConfig(
-        level=getattr(logging, loglevel.upper()),
+        level=getattr(logging, log_level.upper()),
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
     logger = logging.getLogger("weather-server")
