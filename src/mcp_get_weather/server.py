@@ -2,6 +2,7 @@ import contextlib
 import logging
 import os
 from collections.abc import AsyncIterator
+from datetime import datetime
 
 import anyio
 import click
@@ -73,7 +74,6 @@ async def fetch_weekly_weather(city: str, api_key: str) -> list[dict[str, str]]:
         data = r.json()
     
     # Group forecasts by date and extract daily summaries
-    from datetime import datetime
     daily_forecasts = {}
     
     for item in data["list"]:
