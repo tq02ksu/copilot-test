@@ -66,7 +66,7 @@ async def fetch_weekly_weather(city: str, api_key: str) -> list[dict[str, str]]:
         "appid": api_key,
         "units": DEFAULT_UNITS,
         "lang": DEFAULT_LANG,
-        "cnt": 40,  # Request maximum forecast data (API provides ~5 days of 3-hour intervals)
+        "cnt": 40,  # Request 40 forecasts (API limit: 5 days of 3-hour intervals)
     }
     async with httpx.AsyncClient(timeout=10) as client:
         r = await client.get(OPENWEATHER_FORECAST_URL, params=params)
@@ -103,10 +103,8 @@ async def fetch_weekly_weather(city: str, api_key: str) -> list[dict[str, str]]:
                 daily_forecasts[date_key]["humidity"] = humidity_value
             
             # Always update the daily min/max using the actual temperatures
-            if temp_value < daily_forecasts[date_key]["temp_min"]:
-                daily_forecasts[date_key]["temp_min"] = temp_value
-            if temp_value > daily_forecasts[date_key]["temp_max"]:
-                daily_forecasts[date_key]["temp_max"] = temp_value
+            daily_forecasts[date_key]["temp_min"] = min(temp_value, daily_forecasts[date_key]["temp_min"])
+            daily_forecasts[date_key]["temp_max"] = max(temp_value, daily_forecasts[date_key]["temp_max"])
     
     # If no daily forecasts were generated, raise a descriptive error
     if not daily_forecasts:
