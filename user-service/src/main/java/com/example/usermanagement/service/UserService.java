@@ -1,5 +1,7 @@
 package com.example.usermanagement.service;
 
+import com.example.usermanagement.dto.LoginRequest;
+import com.example.usermanagement.dto.LoginResponse;
 import com.example.usermanagement.entity.User;
 import com.example.usermanagement.exception.DuplicateResourceException;
 import com.example.usermanagement.exception.ResourceNotFoundException;
@@ -55,6 +57,9 @@ public class UserService {
 
         user.setUsername(userDetails.getUsername());
         user.setEmail(userDetails.getEmail());
+        if (userDetails.getPassword() != null && !userDetails.getPassword().isEmpty()) {
+            user.setPassword(userDetails.getPassword());
+        }
         
         try {
             return userRepository.save(user);
@@ -78,5 +83,21 @@ public class UserService {
             throw new ResourceNotFoundException("用户不存在，ID: " + id);
         }
         userRepository.deleteById(id);
+    }
+
+    public LoginResponse login(LoginRequest loginRequest) {
+        Optional<User> userOptional = userRepository.findByUsername(loginRequest.getUsername());
+        
+        if (userOptional.isEmpty()) {
+            return new LoginResponse(false, "用户名或密码错误", null, null);
+        }
+        
+        User user = userOptional.get();
+        
+        if (!user.getPassword().equals(loginRequest.getPassword())) {
+            return new LoginResponse(false, "用户名或密码错误", null, null);
+        }
+        
+        return new LoginResponse(true, "登录成功", user.getId(), user.getUsername());
     }
 }

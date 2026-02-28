@@ -26,6 +26,11 @@ public class User {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
+    @NotBlank(message = "密码不能为空")
+    @Size(min = 6, max = 100, message = "密码长度必须在6到100个字符之间")
+    @Column(nullable = false, length = 100)
+    private String password;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -40,6 +45,12 @@ public class User {
     public User(String username, String email) {
         this.username = username;
         this.email = email;
+    }
+
+    public User(String username, String email, String password) {
+        this.username = username;
+        this.email = email;
+        this.password = password;
     }
 
     public Long getId() {
@@ -64,6 +75,14 @@ public class User {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public LocalDateTime getCreatedAt() {
