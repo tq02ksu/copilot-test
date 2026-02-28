@@ -64,6 +64,7 @@ async def fetch_weather(city: str, api_key: str) -> dict[str, str]:
 @click.option(
     "--log-level",
     default="INFO",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], case_sensitive=False),
     help="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
 )
 @click.option(
