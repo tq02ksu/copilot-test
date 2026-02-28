@@ -28,14 +28,16 @@ public class UserService {
             return userRepository.save(user);
         } catch (DataIntegrityViolationException e) {
             // Handle unique constraint violations from database
-            String message = e.getMessage();
-            if (message != null && message.toLowerCase().contains("username")) {
-                throw new DuplicateResourceException("用户名已存在: " + user.getUsername());
-            } else if (message != null && message.toLowerCase().contains("email")) {
-                throw new DuplicateResourceException("邮箱已存在: " + user.getEmail());
-            } else {
-                throw new DuplicateResourceException("数据已存在，无法创建");
+            String rootCause = e.getRootCause() != null ? e.getRootCause().getMessage() : e.getMessage();
+            if (rootCause != null) {
+                String lowerMessage = rootCause.toLowerCase();
+                if (lowerMessage.contains("username") || lowerMessage.contains("'username'")) {
+                    throw new DuplicateResourceException("用户名已存在: " + user.getUsername());
+                } else if (lowerMessage.contains("email") || lowerMessage.contains("'email'")) {
+                    throw new DuplicateResourceException("邮箱已存在: " + user.getEmail());
+                }
             }
+            throw new DuplicateResourceException("数据已存在，无法创建");
         }
     }
 
@@ -58,14 +60,16 @@ public class UserService {
             return userRepository.save(user);
         } catch (DataIntegrityViolationException e) {
             // Handle unique constraint violations from database
-            String message = e.getMessage();
-            if (message != null && message.toLowerCase().contains("username")) {
-                throw new DuplicateResourceException("用户名已存在: " + userDetails.getUsername());
-            } else if (message != null && message.toLowerCase().contains("email")) {
-                throw new DuplicateResourceException("邮箱已存在: " + userDetails.getEmail());
-            } else {
-                throw new DuplicateResourceException("数据已存在，无法更新");
+            String rootCause = e.getRootCause() != null ? e.getRootCause().getMessage() : e.getMessage();
+            if (rootCause != null) {
+                String lowerMessage = rootCause.toLowerCase();
+                if (lowerMessage.contains("username") || lowerMessage.contains("'username'")) {
+                    throw new DuplicateResourceException("用户名已存在: " + userDetails.getUsername());
+                } else if (lowerMessage.contains("email") || lowerMessage.contains("'email'")) {
+                    throw new DuplicateResourceException("邮箱已存在: " + userDetails.getEmail());
+                }
             }
+            throw new DuplicateResourceException("数据已存在，无法更新");
         }
     }
 

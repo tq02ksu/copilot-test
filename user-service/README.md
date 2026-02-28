@@ -184,8 +184,6 @@ curl -X DELETE http://localhost:8080/api/users/1
 
 ### Docker Compose 配置
 
-### Docker Compose 配置
-
 Docker Compose 创建以下资源：
 
 - **MySQL 8.0** 容器
