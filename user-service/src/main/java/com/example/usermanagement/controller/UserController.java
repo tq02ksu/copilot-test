@@ -1,5 +1,7 @@
 package com.example.usermanagement.controller;
 
+import com.example.usermanagement.dto.LoginRequest;
+import com.example.usermanagement.dto.LoginResponse;
 import com.example.usermanagement.entity.User;
 import com.example.usermanagement.exception.ResourceNotFoundException;
 import com.example.usermanagement.service.UserService;
@@ -55,5 +57,15 @@ public class UserController {
         Map<String, String> response = new HashMap<>();
         response.put("message", "用户删除成功");
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
+        LoginResponse response = userService.login(loginRequest);
+        if (response.isSuccess()) {
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
     }
 }
