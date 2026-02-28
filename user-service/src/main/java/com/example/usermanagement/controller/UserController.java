@@ -44,7 +44,7 @@ public class UserController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getUserById(@PathVariable Long id) {
         return userService.getUserById(id)
-                .map(ResponseEntity::ok)
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
                 .orElseGet(() -> {
                     Map<String, String> error = new HashMap<>();
                     error.put("error", "用户不存在，ID: " + id);
