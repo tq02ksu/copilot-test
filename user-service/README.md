@@ -73,13 +73,13 @@ DELETE /api/users/{id}
 
 ```bash
 cd user-service
-docker-compose up -d
+docker compose up -d
 ```
 
 等待 MySQL 容器完全启动（大约 20-30 秒）：
 
 ```bash
-docker-compose ps
+docker compose ps
 ```
 
 ### 2. 构建应用
@@ -91,25 +91,27 @@ mvn clean package
 
 ### 3. 运行应用
 
-使用默认配置运行：
+**开发环境**（使用 dev profile，支持自动 DDL 更新和详细日志）：
 
 ```bash
-mvn spring-boot:run
+export DB_PASSWORD=userpassword
+mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-或者使用环境变量自定义配置：
+或运行打包后的 JAR：
 
 ```bash
-export DB_URL=jdbc:mysql://localhost:3306/userdb?useSSL=false&serverTimezone=Asia/Shanghai
-export DB_USERNAME=root
-export DB_PASSWORD=rootpassword
-export SERVER_PORT=8080
-mvn spring-boot:run
+export DB_PASSWORD=userpassword
+java -jar target/user-management-1.0.0.jar --spring.profiles.active=dev
 ```
 
-或者运行打包后的 JAR：
+**生产环境**（需要提供所有必要的环境变量）：
 
 ```bash
+export DB_URL=jdbc:mysql://your-mysql-host:3306/userdb?useSSL=true&requireSSL=true&verifyServerCertificate=true&serverTimezone=Asia/Shanghai
+export DB_USERNAME=your_username
+export DB_PASSWORD=your_password
+export DDL_AUTO=validate
 java -jar target/user-management-1.0.0.jar
 ```
 
@@ -153,20 +155,40 @@ curl -X DELETE http://localhost:8080/api/users/1
 
 ## 配置说明
 
-### 数据库配置
+### 环境变量
 
 应用支持通过环境变量自定义配置：
 
 | 环境变量 | 默认值 | 说明 |
 |---------|--------|------|
-| `DB_URL` | `jdbc:mysql://localhost:3306/userdb?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true` | 数据库连接 URL |
-| `DB_USERNAME` | `root` | 数据库用户名 |
-| `DB_PASSWORD` | `rootpassword` | 数据库密码 |
+| `DB_URL` | 见下方生产/开发配置 | 数据库连接 URL |
+| `DB_USERNAME` | `user` (生产)<br/>`user` (开发) | 数据库用户名 |
+| `DB_PASSWORD` | **必需** (生产)<br/>`userpassword` (开发) | 数据库密码 |
 | `SERVER_PORT` | `8080` | 应用端口 |
+| `DDL_AUTO` | `validate` | Hibernate DDL 模式 |
+| `SHOW_SQL` | `false` | 是否显示 SQL |
 
-### 默认数据库配置
+### 配置文件
 
-默认数据库配置（可在 `src/main/resources/application.properties` 中修改）：
+- **application.properties**: 生产环境配置（安全默认值）
+  - SSL 连接已启用
+  - 无默认密码（必须通过环境变量提供）
+  - DDL auto 设为 validate
+  - SQL 日志关闭
+  
+- **application-dev.properties**: 开发环境配置
+  - 禁用 SSL（仅用于本地开发）
+  - 默认密码 `userpassword`
+  - DDL auto 设为 update（自动更新数据库结构）
+  - 详细的 SQL 日志
+
+### Docker Compose 配置
+
+### Docker Compose 配置
+
+Docker Compose 创建以下资源：
+
+- **MySQL 8.0** 容器
 
 - **数据库名称**: userdb
 - **主机**: localhost

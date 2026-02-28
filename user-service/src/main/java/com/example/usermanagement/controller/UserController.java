@@ -1,6 +1,7 @@
 package com.example.usermanagement.controller;
 
 import com.example.usermanagement.entity.User;
+import com.example.usermanagement.exception.ResourceNotFoundException;
 import com.example.usermanagement.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,15 +25,9 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createUser(@Valid @RequestBody User user) {
-        try {
-            User createdUser = userService.createUser(user);
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
-        } catch (IllegalArgumentException e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-        }
+    public ResponseEntity<User> createUser(@Valid @RequestBody User user) {
+        User createdUser = userService.createUser(user);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
     }
 
     @GetMapping
@@ -42,39 +37,23 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getUserById(@PathVariable Long id) {
-        return userService.getUserById(id)
-                .<ResponseEntity<?>>map(ResponseEntity::ok)
-                .orElseGet(() -> {
-                    Map<String, String> error = new HashMap<>();
-                    error.put("error", "用户不存在，ID: " + id);
-                    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
-                });
+    public ResponseEntity<User> getUserById(@PathVariable Long id) {
+        User user = userService.getUserById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("用户不存在，ID: " + id));
+        return ResponseEntity.ok(user);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateUser(@PathVariable Long id, @Valid @RequestBody User userDetails) {
-        try {
-            User updatedUser = userService.updateUser(id, userDetails);
-            return ResponseEntity.ok(updatedUser);
-        } catch (IllegalArgumentException e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-        }
+    public ResponseEntity<User> updateUser(@PathVariable Long id, @Valid @RequestBody User userDetails) {
+        User updatedUser = userService.updateUser(id, userDetails);
+        return ResponseEntity.ok(updatedUser);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
-        try {
-            userService.deleteUser(id);
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "用户删除成功");
-            return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
-        }
+    public ResponseEntity<Map<String, String>> deleteUser(@PathVariable Long id) {
+        userService.deleteUser(id);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "用户删除成功");
+        return ResponseEntity.ok(response);
     }
 }

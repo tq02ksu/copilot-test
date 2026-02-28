@@ -1,8 +1,11 @@
 package com.example.usermanagement.service;
 
 import com.example.usermanagement.entity.User;
+import com.example.usermanagement.exception.DuplicateResourceException;
+import com.example.usermanagement.exception.ResourceNotFoundException;
 import com.example.usermanagement.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,13 +24,19 @@ public class UserService {
     }
 
     public User createUser(User user) {
-        if (userRepository.existsByUsername(user.getUsername())) {
-            throw new IllegalArgumentException("用户名已存在: " + user.getUsername());
+        try {
+            return userRepository.save(user);
+        } catch (DataIntegrityViolationException e) {
+            // Handle unique constraint violations from database
+            String message = e.getMessage();
+            if (message != null && message.toLowerCase().contains("username")) {
+                throw new DuplicateResourceException("用户名已存在: " + user.getUsername());
+            } else if (message != null && message.toLowerCase().contains("email")) {
+                throw new DuplicateResourceException("邮箱已存在: " + user.getEmail());
+            } else {
+                throw new DuplicateResourceException("数据已存在，无法创建");
+            }
         }
-        if (userRepository.existsByEmail(user.getEmail())) {
-            throw new IllegalArgumentException("邮箱已存在: " + user.getEmail());
-        }
-        return userRepository.save(user);
     }
 
     public List<User> getAllUsers() {
@@ -40,26 +49,29 @@ public class UserService {
 
     public User updateUser(Long id, User userDetails) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("用户不存在，ID: " + id));
-
-        if (!user.getUsername().equals(userDetails.getUsername()) 
-                && userRepository.existsByUsername(userDetails.getUsername())) {
-            throw new IllegalArgumentException("用户名已存在: " + userDetails.getUsername());
-        }
-
-        if (!user.getEmail().equals(userDetails.getEmail()) 
-                && userRepository.existsByEmail(userDetails.getEmail())) {
-            throw new IllegalArgumentException("邮箱已存在: " + userDetails.getEmail());
-        }
+                .orElseThrow(() -> new ResourceNotFoundException("用户不存在，ID: " + id));
 
         user.setUsername(userDetails.getUsername());
         user.setEmail(userDetails.getEmail());
-        return userRepository.save(user);
+        
+        try {
+            return userRepository.save(user);
+        } catch (DataIntegrityViolationException e) {
+            // Handle unique constraint violations from database
+            String message = e.getMessage();
+            if (message != null && message.toLowerCase().contains("username")) {
+                throw new DuplicateResourceException("用户名已存在: " + userDetails.getUsername());
+            } else if (message != null && message.toLowerCase().contains("email")) {
+                throw new DuplicateResourceException("邮箱已存在: " + userDetails.getEmail());
+            } else {
+                throw new DuplicateResourceException("数据已存在，无法更新");
+            }
+        }
     }
 
     public void deleteUser(Long id) {
         if (!userRepository.existsById(id)) {
-            throw new IllegalArgumentException("用户不存在，ID: " + id);
+            throw new ResourceNotFoundException("用户不存在，ID: " + id);
         }
         userRepository.deleteById(id);
     }

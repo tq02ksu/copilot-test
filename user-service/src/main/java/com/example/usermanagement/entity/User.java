@@ -22,6 +22,7 @@ public class User {
 
     @NotBlank(message = "邮箱不能为空")
     @Email(message = "邮箱格式不正确")
+    @Size(max = 100, message = "邮箱长度不能超过100个字符")
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
