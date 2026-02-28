@@ -91,7 +91,19 @@ mvn clean package
 
 ### 3. 运行应用
 
+使用默认配置运行：
+
 ```bash
+mvn spring-boot:run
+```
+
+或者使用环境变量自定义配置：
+
+```bash
+export DB_URL=jdbc:mysql://localhost:3306/userdb?useSSL=false&serverTimezone=Asia/Shanghai
+export DB_USERNAME=root
+export DB_PASSWORD=rootpassword
+export SERVER_PORT=8080
 mvn spring-boot:run
 ```
 
@@ -139,7 +151,20 @@ curl -X PUT http://localhost:8080/api/users/1 \
 curl -X DELETE http://localhost:8080/api/users/1
 ```
 
-## 数据库配置
+## 配置说明
+
+### 数据库配置
+
+应用支持通过环境变量自定义配置：
+
+| 环境变量 | 默认值 | 说明 |
+|---------|--------|------|
+| `DB_URL` | `jdbc:mysql://localhost:3306/userdb?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true` | 数据库连接 URL |
+| `DB_USERNAME` | `root` | 数据库用户名 |
+| `DB_PASSWORD` | `rootpassword` | 数据库密码 |
+| `SERVER_PORT` | `8080` | 应用端口 |
+
+### 默认数据库配置
 
 默认数据库配置（可在 `src/main/resources/application.properties` 中修改）：
 
