@@ -1,10 +1,25 @@
-# 🌦️ MCP 天气服务（`mcp-weather-http`）
+# Copilot 测试项目
+
+本仓库包含多个示例服务项目，用于演示不同技术栈的应用开发。
+
+## 📦 项目列表
+
+### 1. 🌦️ MCP 天气服务（`mcp-weather-http`）
 
 一个基于 [OpenWeather API](https://openweathermap.org/api) 的**实时天气查询服务端**，兼容 [MCP 协议](https://mcp.chat)，支持流式响应（SSE）和 JSON 响应。
 
 项目采用 `src/` 源码结构，推荐使用 [`uv`](https://github.com/astral-sh/uv) 管理依赖。
 
+### 2. 👥 用户管理服务（`user-service`）
+
+基于 Spring Boot 3.x 的用户管理 REST API 服务，连接 MySQL 数据库，提供完整的用户 CRUD 操作。
+
+- 技术栈：Spring Boot 3.2.2, Spring Data JPA, MySQL 8.0
+- 查看详细文档：[user-service/README.md](user-service/README.md)
+
 ---
+
+## MCP 天气服务详细说明
 
 ## 🚀 功能简介
 
