@@ -2,6 +2,7 @@ import contextlib
 import logging
 import os
 from collections.abc import AsyncIterator
+from datetime import datetime, timezone
 
 import anyio
 import click
@@ -17,6 +18,7 @@ from starlette.types import Receive, Scope, Send
 # Weather helpers
 # ---------------------------------------------------------------------------
 OPENWEATHER_URL = "https://api.openweathermap.org/data/2.5/weather"
+OPENWEATHER_FORECAST_URL = "https://api.openweathermap.org/data/2.5/forecast"
 DEFAULT_UNITS = "metric"  # use Celsius by default
 DEFAULT_LANG = "zh_cn"  # Chinese descriptions
 
@@ -53,6 +55,77 @@ async def fetch_weather(city: str, api_key: str) -> dict[str, str]:
     }
 
 
+async def fetch_weekly_weather(city: str, api_key: str) -> list[dict[str, str]]:
+    """Call OpenWeather forecast API and return up to 5 days of weather forecast.
+
+    Raises:
+        httpx.HTTPStatusError: if the response has a non-2xx status.
+    """
+    params = {
+        "q": city,
+        "appid": api_key,
+        "units": DEFAULT_UNITS,
+        "lang": DEFAULT_LANG,
+        "cnt": 40,  # Request 40 forecasts (API limit: 5 days of 3-hour intervals)
+    }
+    async with httpx.AsyncClient(timeout=10) as client:
+        r = await client.get(OPENWEATHER_FORECAST_URL, params=params)
+        r.raise_for_status()
+        data = r.json()
+    
+    # Group forecasts by date and extract daily summaries
+    daily_forecasts: dict[str, dict] = {}
+    
+    for item in data["list"]:
+        # Parse the forecast timestamp (use UTC for consistency)
+        dt = datetime.fromtimestamp(item["dt"], tz=timezone.utc)
+        date_key = dt.strftime("%Y-%m-%d")
+        
+        temp_value = float(item["main"]["temp"])
+        humidity_value = int(item["main"]["humidity"])
+        
+        # Initialize this date's entry if we haven't seen it yet
+        if date_key not in daily_forecasts:
+            daily_forecasts[date_key] = {
+                "date": dt.strftime("%Y年%m月%d日"),
+                # Use the first forecast of the day as an initial summary
+                "description": item["weather"][0]["description"],
+                "temp": temp_value,
+                "temp_min": temp_value,
+                "temp_max": temp_value,
+                "humidity": humidity_value,
+            }
+        else:
+            # Update the representative snapshot if this is a midday forecast
+            if dt.hour == 12:
+                daily_forecasts[date_key]["description"] = item["weather"][0]["description"]
+                daily_forecasts[date_key]["temp"] = temp_value
+                daily_forecasts[date_key]["humidity"] = humidity_value
+            
+            # Always update the daily min/max using the actual temperatures
+            daily_forecasts[date_key]["temp_min"] = min(temp_value, daily_forecasts[date_key]["temp_min"])
+            daily_forecasts[date_key]["temp_max"] = max(temp_value, daily_forecasts[date_key]["temp_max"])
+    
+    # If no daily forecasts were generated, raise a descriptive error
+    if not daily_forecasts:
+        raise ValueError(f"No forecast data available for city: {city}")
+    
+    # Format numeric values and return available forecast days (up to 5)
+    result: list[dict[str, str]] = []
+    for day in daily_forecasts.values():
+        day_formatted = {
+            "date": day["date"],
+            "description": day["description"],
+            "temp": f"{day['temp']:.1f}°C",
+            "temp_min": f"{day['temp_min']:.1f}°C",
+            "temp_max": f"{day['temp_max']:.1f}°C",
+            "humidity": f"{day['humidity']}%",
+        }
+        result.append(day_formatted)
+    
+    return result
+
+
 @click.command()
 @click.option("--port", default=3000, help="Port to listen on for HTTP")
 @click.option(
@@ -64,6 +137,7 @@ async def fetch_weather(city: str, api_key: str) -> dict[str, str]:
 @click.option(
     "--log-level",
     default="INFO",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], case_sensitive=False),
     help="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
 )
 @click.option(
@@ -88,49 +162,97 @@ def main(port: int, api_key: str, log_level: str, json_response: bool) -> int:
     # ---------------------- Tool implementation -------------------
     @app.call_tool()
     async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
-        """Handle the 'get-weather' tool call."""
+        """Handle tool calls for both current and weekly weather."""
         ctx = app.request_context
         city = arguments.get("location")
         if not city:
             raise ValueError("'location' is required in arguments")
 
-        # Send an initial log message so the client sees streaming early.
-        await ctx.session.send_log_message(
-            level="info",
-            data=f"Fetching weather for {city}…",
-            logger="weather",
-            related_request_id=ctx.request_id,
-        )
-
-        try:
-            weather = await fetch_weather(city, api_key)
-        except Exception as err:
-            # Stream the error to the client and re-raise so MCP returns error.
+        if name == "get-weather":
+            # Send an initial log message so the client sees streaming early.
             await ctx.session.send_log_message(
-                level="error",
-                data=str(err),
+                level="info",
+                data=f"Fetching weather for {city}…",
                 logger="weather",
                 related_request_id=ctx.request_id,
             )
-            raise
 
-        # Stream a success notification (optional)
-        await ctx.session.send_log_message(
-            level="info",
-            data="Weather data fetched successfully!",
-            logger="weather",
-            related_request_id=ctx.request_id,
-        )
+            try:
+                weather = await fetch_weather(city, api_key)
+            except Exception as err:
+                # Stream the error to the client and re-raise so MCP returns error.
+                await ctx.session.send_log_message(
+                    level="error",
+                    data=str(err),
+                    logger="weather",
+                    related_request_id=ctx.request_id,
+                )
+                raise
 
-        # Compose human-readable summary for the final return value.
-        summary = (
-            f"{weather['city']}：{weather['description']}，温度 {weather['temp']}，"
-            f"体感 {weather['feels_like']}，湿度 {weather['humidity']}。"
-        )
+            # Stream a success notification (optional)
+            await ctx.session.send_log_message(
+                level="info",
+                data="Weather data fetched successfully!",
+                logger="weather",
+                related_request_id=ctx.request_id,
+            )
 
-        return [
-            types.TextContent(type="text", text=summary),
-        ]
+            # Compose human-readable summary for the final return value.
+            summary = (
+                f"{weather['city']}：{weather['description']}，温度 {weather['temp']}，"
+                f"体感 {weather['feels_like']}，湿度 {weather['humidity']}。"
+            )
+
+            return [
+                types.TextContent(type="text", text=summary),
+            ]
+
+        elif name == "get-weekly-weather":
+            # Send an initial log message
+            await ctx.session.send_log_message(
+                level="info",
+                data=f"Fetching weather forecast for {city}…",
+                logger="weather",
+                related_request_id=ctx.request_id,
+            )
+
+            try:
+                forecasts = await fetch_weekly_weather(city, api_key)
+            except Exception as err:
+                # Stream the error to the client and re-raise so MCP returns error.
+                await ctx.session.send_log_message(
+                    level="error",
+                    data=str(err),
+                    logger="weather",
+                    related_request_id=ctx.request_id,
+                )
+                raise
+
+            # Stream a success notification
+            await ctx.session.send_log_message(
+                level="info",
+                data=f"Fetched {len(forecasts)} days of forecast data!",
+                logger="weather",
+                related_request_id=ctx.request_id,
+            )
+
+            # Compose human-readable summary for the forecast
+            summary_lines = [f"{city}未来几天天气预报：\n"]
+            for forecast in forecasts:
+                summary_lines.append(
+                    f"• {forecast['date']}：{forecast['description']}，"
+                    f"温度 {forecast['temp']}（最低 {forecast['temp_min']}，最高 {forecast['temp_max']}），"
+                    f"湿度 {forecast['humidity']}"
+                )
+            
+            summary = "\n".join(summary_lines)
+
+            return [
+                types.TextContent(type="text", text=summary),
+            ]
+        
+        else:
+            raise ValueError(f"Unknown tool: {name}")
 
     # ---------------------- Tool registry -------------------------
     @app.list_tools()
@@ -150,7 +272,21 @@ def main(port: int, api_key: str, log_level: str, json_response: bool) -> int:
                         }
                     },
                 },
-            )
+            ),
+            types.Tool(
+                name="get-weekly-weather",
+                description="查询指定城市未来几天的天气预报（OpenWeather 数据）",
+                inputSchema={
+                    "type": "object",
+                    "required": ["location"],
+                    "properties": {
+                        "location": {
+                            "type": "string",
+                            "description": "城市的英文名称，如 'Beijing'",
+                        }
+                    },
+                },
+            ),
         ]
 
     # ---------------------- Session manager -----------------------
