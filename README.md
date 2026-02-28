@@ -8,8 +8,11 @@
 
 ## 🚀 功能简介
 
-* 提供一个 LLM 可调用的 MCP 工具：`get-weather`
+* 提供两个 LLM 可调用的 MCP 工具：
+  * `get-weather` - 查询指定城市的实时天气
+  * `get-weekly-weather` - 查询指定城市未来几天的天气预报
 * 查询指定城市的实时天气（中文描述 + 摄氏温度）
+* 查询未来几天天气预报（每日温度范围 + 中文描述）
 * 流式返回日志、错误与最终结果
 * 支持 JSON 响应或 SSE 流式输出
 * 使用 [`httpx`](https://www.python-httpx.org/)、[`starlette`](https://www.starlette.io/)、[`click`](https://click.palletsprojects.com/) 构建
@@ -70,6 +73,8 @@ export OPENWEATHER_API_KEY=your_actual_api_key
 
 服务向客户端暴露以下工具：
 
+### 1. 实时天气查询（get-weather）
+
 ```json
 {
   "name": "get-weather",
@@ -87,12 +92,44 @@ export OPENWEATHER_API_KEY=your_actual_api_key
 }
 ```
 
+### 2. 天气预报（get-weekly-weather）
+
+```json
+{
+  "name": "get-weekly-weather",
+  "description": "查询指定城市未来几天的天气预报（OpenWeather 数据）",
+  "inputSchema": {
+    "type": "object",
+    "required": ["location"],
+    "properties": {
+      "location": {
+        "type": "string",
+        "description": "城市的英文名称，如 'Beijing'"
+      }
+    }
+  }
+}
+```
+
 ---
 
 ## 📡 返回结果示例
 
+### 实时天气
+
 ```
 Beijing：多云，温度 28.4°C，体感 30.1°C，湿度 55%。
+```
+
+### 天气预报
+
+```
+Beijing未来几天天气预报：
+
+• 2026年02月27日：晴，温度 15.0°C（最低 10.0°C，最高 18.0°C），湿度 45%
+• 2026年02月28日：多云，温度 14.0°C（最低 9.0°C，最高 17.0°C），湿度 50%
+• 2026年03月01日：小雨，温度 12.0°C（最低 8.0°C，最高 15.0°C），湿度 65%
+... (最多5天)
 ```
 
 ---
