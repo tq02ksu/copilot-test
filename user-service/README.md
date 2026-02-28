@@ -18,6 +18,7 @@
 - `id`: 主键，自动生成
 - `username`: 用户名，唯一，3-50字符
 - `email`: 邮箱，唯一，有效邮箱格式
+- `password`: 密码，6-100字符
 - `created_at`: 创建时间，自动生成
 
 ## API 端点
@@ -29,7 +30,39 @@ Content-Type: application/json
 
 {
   "username": "zhangsan",
-  "email": "zhangsan@example.com"
+  "email": "zhangsan@example.com",
+  "password": "password123"
+}
+```
+
+### 用户登录
+```http
+POST /api/users/login
+Content-Type: application/json
+
+{
+  "username": "zhangsan",
+  "password": "password123"
+}
+```
+
+返回示例（成功）：
+```json
+{
+  "success": true,
+  "message": "登录成功",
+  "userId": 1,
+  "username": "zhangsan"
+}
+```
+
+返回示例（失败）：
+```json
+{
+  "success": false,
+  "message": "用户名或密码错误",
+  "userId": null,
+  "username": null
 }
 ```
 
@@ -50,7 +83,8 @@ Content-Type: application/json
 
 {
   "username": "zhangsan_updated",
-  "email": "zhangsan_new@example.com"
+  "email": "zhangsan_new@example.com",
+  "password": "newpassword123"
 }
 ```
 
@@ -124,7 +158,15 @@ java -jar target/user-management-1.0.0.jar
 ```bash
 curl -X POST http://localhost:8080/api/users \
   -H "Content-Type: application/json" \
-  -d '{"username":"zhangsan","email":"zhangsan@example.com"}'
+  -d '{"username":"zhangsan","email":"zhangsan@example.com","password":"password123"}'
+```
+
+用户登录：
+
+```bash
+curl -X POST http://localhost:8080/api/users/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"zhangsan","password":"password123"}'
 ```
 
 获取所有用户：
@@ -144,7 +186,7 @@ curl http://localhost:8080/api/users/1
 ```bash
 curl -X PUT http://localhost:8080/api/users/1 \
   -H "Content-Type: application/json" \
-  -d '{"username":"zhangsan_updated","email":"zhangsan_new@example.com"}'
+  -d '{"username":"zhangsan_updated","email":"zhangsan_new@example.com","password":"newpassword123"}'
 ```
 
 删除用户：
